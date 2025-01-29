@@ -1,8 +1,10 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app). Used as a mob programming session during interview.
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies.
+
+Second, run the development server:
 
 ```bash
 npm run dev
@@ -16,21 +18,23 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Notes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This session is designed to be a pair programming session. One person will be the driver and the other will be the navigator. The driver will be the one who writes the code and the navigator will be the one who watches the code and provides feedback.
 
-## Learn More
+The site shows an input field with a list of movies to search from. The movie search results are mocked and show a loading state, with a randomized delay to mimic a real API call.
 
-To learn more about Next.js, take a look at the following resources:
+The knowledge being tested is:
+- Basic React local state management
+- React custom hooks and useEffect advanced usage. E.g. shouldComponentUpdate
+- Debouncing implementation with setTimeout
+- Test component rendering
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Remove the content of the hook useDebounceSearch.ts
+- Use the local state to store the query as is and show the candidate the current state without debouncing
+- Ask the candidate what's wrong with the current implementation
+- If the candidate mentions the debounce, ask them to implement it in the custom hook useDebounceSearch.ts
+- Ask the candidate to add a test to the component MovieSearch.tsx
+- Ask the candidate to add a test to the useDebounceSearch hook
