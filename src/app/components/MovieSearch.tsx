@@ -1,69 +1,133 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Search, Loader2 } from 'lucide-react';
-import useDebounceSearch from '../hooks/useDebounceSearch';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { Search, Loader2, Heart, HeartOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { Movie, movieList } from '../data/movieList';
 
-interface Movie {
-  id: number;
-  title: string;
-  year: number;
-}
-
-// Mock movie data
-const mockMovies: Movie[] = [
-  { id: 1, title: 'The Shawshank Redemption', year: 1994 },
-  { id: 2, title: 'The Godfather', year: 1972 },
-  { id: 3, title: 'The Dark Knight', year: 2008 },
-  { id: 4, title: 'Pulp Fiction', year: 1994 },
-  { id: 5, title: 'Fight Club', year: 1999 },
-  { id: 6, title: 'Inception', year: 2010 },
-  { id: 7, title: 'The Matrix', year: 1999 },
-  { id: 8, title: 'Interstellar', year: 2014 },
-  { id: 9, title: 'The Silence of the Lambs', year: 1991 },
-  { id: 10, title: 'Forrest Gump', year: 1994 },
-];
-
-// Mock API call
-const searchMovies = async (query: string): Promise<Movie[]> => {
+// Mock API call with pagination
+const searchMovies = async (query: string, page: number = 1): Promise<{ movies: Movie[]; hasMore: boolean }> => {
   const delay = Math.floor(Math.random() * (900 - 300 + 1)) + 300;
   await new Promise((resolve) => setTimeout(resolve, delay));
 
-  return mockMovies.filter((movie) => movie.title.toLowerCase().includes(query.toLowerCase()));
+  const filteredMovies = movieList.filter((movie) => movie.title.toLowerCase().includes(query.toLowerCase()));
+
+  const perPage = 10;
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
+
+  return {
+    movies: filteredMovies.slice(start, end),
+    hasMore: end < filteredMovies.length,
+  };
 };
+
+// Memoized Movie Item Component
+const MovieItem = memo(
+  ({
+    movie,
+    isFavourite,
+    onToggleFavourite,
+  }: {
+    movie: Movie;
+    isFavourite: boolean;
+    onToggleFavourite: (id: number) => void;
+  }) => (
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
+      data-testid={`movie-item-${movie.id}`}
+    >
+      <div className="flex items-center gap-3">
+        <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded" />
+        <div>
+          <div className="font-medium">{movie.title}</div>
+          <div className="text-sm text-gray-500">{movie.year}</div>
+          {movie.genre && <div className="text-xs text-gray-400">{movie.genre.join(', ')}</div>}
+        </div>
+      </div>
+      <button
+        onClick={() => onToggleFavourite(movie.id)}
+        className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+      >
+        {isFavourite ? (
+          <Heart className="h-5 w-5 text-red-500 fill-current" />
+        ) : (
+          <HeartOff className="h-5 w-5 text-gray-400" />
+        )}
+      </button>
+    </motion.li>
+  ),
+);
+
+MovieItem.displayName = 'MovieItem';
 
 const MovieSearch: React.FC = () => {
   const [results, setResults] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState<string>('');
 
-  // const { query, setQuery, debouncedQuery } = useDebounceSearch(500);
+  const loadMovies = useCallback(async (searchQuery: string, pageNum: number, append: boolean = false) => {
+    if (searchQuery.trim() === '') {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
 
+    setIsLoading(true);
+    setShowDropdown(true);
+
+    try {
+      const { movies, hasMore: more } = await searchMovies(searchQuery, pageNum);
+      setResults((prev) => (append ? [...prev, ...movies] : movies));
+      setHasMore(more);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial search
   useEffect(() => {
-    const handleSearch = async () => {
-      if (query.trim() === '') {
-        setResults([]);
-        setShowDropdown(false);
-        return;
-      }
+    setPage(1);
+    loadMovies(query, 1);
+  }, [query, loadMovies]);
 
-      setIsLoading(true);
-      setShowDropdown(true);
+  // Infinite scroll
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastMovieRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (isLoading) return;
+      if (observer.current) observer.current.disconnect();
 
-      try {
-        const searchResults = await searchMovies(query);
-        setResults(searchResults);
-      } catch (error) {
-        console.error('Search error:', error);
-        setResults([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPage((prev) => prev + 1);
+          loadMovies(query, page + 1, true);
+        }
+      });
 
-    handleSearch();
-  }, [query]);
+      if (node) observer.current.observe(node);
+    },
+    [isLoading, hasMore, query, page, loadMovies],
+  );
+
+  // Virtual list setup
+  const rowVirtualizer = useVirtualizer({
+    count: results.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => 80, // Increased height for the new card design
+    overscan: 5,
+  });
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -80,10 +144,11 @@ const MovieSearch: React.FC = () => {
     };
   }, []);
 
+  const handleToggleFavourite = () => {};
+
   return (
-    <div className="w-full max-w-md mx-auto mt-8">
+    <div className="w-full max-w-2xl mx-auto mt-8">
       <div className="relative search-container">
-        {/* Search input */}
         <div className="relative">
           <input
             data-testid="search-input"
@@ -92,43 +157,61 @@ const MovieSearch: React.FC = () => {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => query && setShowDropdown(true)}
             placeholder="Search movies..."
-            className="w-full px-4 py-2 pl-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 pl-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
           />
           <Search data-testid="search-icon" className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
         </div>
 
-        {/* Dropdown */}
-        {showDropdown && (
-          <div
-            data-testid="search-dropdown"
-            className="absolute w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto z-10"
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 data-testid="loader-icon" className="h-6 w-6 animate-spin text-blue-500" />
-              </div>
-            ) : results.length > 0 ? (
-              <ul className="py-2">
-                {results.map((movie) => (
-                  <li
-                    key={movie.id}
-                    data-testid={`movie-item-${movie.id}`}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                  >
-                    <div className="font-medium">{movie.title}</div>
-                    <div className="text-sm text-gray-500">{movie.year}</div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              query && (
-                <div data-testid="no-results" className="p-4 text-center text-gray-500">
-                  No movies found
+        <AnimatePresence>
+          {showDropdown && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              data-testid="search-dropdown"
+              className="absolute w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-[32rem] overflow-y-auto z-10"
+              ref={containerRef}
+            >
+              {isLoading && page === 1 ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 data-testid="loader-icon" className="h-6 w-6 animate-spin text-blue-500" />
                 </div>
-              )
-            )}
-          </div>
-        )}
+              ) : results.length > 0 ? (
+                <ul className="py-2" style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const movie = results[virtualRow.index];
+                    return (
+                      <div
+                        key={movie.id}
+                        ref={virtualRow.index === results.length - 1 ? lastMovieRef : null}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        <MovieItem movie={movie} isFavourite={false} onToggleFavourite={handleToggleFavourite} />
+                      </div>
+                    );
+                  })}
+                </ul>
+              ) : (
+                query && (
+                  <div data-testid="no-results" className="p-4 text-center text-gray-500">
+                    No movies found
+                  </div>
+                )
+              )}
+              {isLoading && page > 1 && (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

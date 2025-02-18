@@ -1,8 +1,16 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app). Used as a mob programming session during interview.
-
 ## Getting Started
 
 First, install dependencies.
+
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+# or
+bun install
+```
 
 Second, run the development server:
 
@@ -20,21 +28,17 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Notes
 
-This session is designed to be a pair programming session. One person will be the driver and the other will be the navigator. The driver will be the one who writes the code and the navigator will be the one who watches the code and provides feedback.
-
 The site shows an input field with a list of movies to search from. The movie search results are mocked and show a loading state, with a randomized delay to mimic a real API call.
 
-The knowledge being tested is:
-- Basic React local state management
-- React custom hooks and useEffect advanced usage. E.g. shouldComponentUpdate
-- Debouncing implementation with setTimeout
-- Test component rendering
+## Tasks
 
-## Flow
-
-- Remove the content of the hook useDebounceSearch.ts
-- Use the local state to store the query as is and show the candidate the current state without debouncing
-- Ask the candidate what's wrong with the current implementation
-- If the candidate mentions the debounce, ask them to implement it in the custom hook useDebounceSearch.ts
-- Ask the candidate to add a test to the component MovieSearch.tsx
-- Ask the candidate to add a test to the useDebounceSearch hook
+### Task 1
+- Implement the debounce search in a custom hook
+### Task 2
+- Implement Error Boundary for the movie list
+### Task 3
+- Implement pagination for the movie list and search results
+### Task 4
+- Implement favourite with redux
+### Task 5
+- Implement movie list update on movie search result click
