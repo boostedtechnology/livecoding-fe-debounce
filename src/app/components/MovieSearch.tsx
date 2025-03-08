@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { Search, Loader2, Heart, HeartOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Loader2 } from 'lucide-react';
+import { motion, AnimatePresence, animate } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Movie, movieList } from '../data/movieList';
+import MovieItem from './MovieItem';
+import SearchInput from './SearchInput';
 
 // Mock API call with pagination
 const searchMovies = async (query: string, page: number = 1): Promise<{ movies: Movie[]; hasMore: boolean }> => {
@@ -22,49 +24,6 @@ const searchMovies = async (query: string, page: number = 1): Promise<{ movies: 
     hasMore: end < filteredMovies.length,
   };
 };
-
-// Memoized Movie Item Component
-const MovieItem = memo(
-  ({
-    movie,
-    isFavourite,
-    onToggleFavourite,
-  }: {
-    movie: Movie;
-    isFavourite: boolean;
-    onToggleFavourite: (id: number) => void;
-  }) => (
-    <motion.li
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
-      data-testid={`movie-item-${movie.id}`}
-    >
-      <div className="flex items-center gap-3">
-        <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded" />
-        <div>
-          <div className="font-medium">{movie.title}</div>
-          <div className="text-sm text-gray-500">{movie.year}</div>
-          {movie.genre && <div className="text-xs text-gray-400">{movie.genre.join(', ')}</div>}
-        </div>
-      </div>
-      <button
-        onClick={() => onToggleFavourite(movie.id)}
-        className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-      >
-        {isFavourite ? (
-          <Heart className="h-5 w-5 text-red-500 fill-current" />
-        ) : (
-          <HeartOff className="h-5 w-5 text-gray-400" />
-        )}
-      </button>
-    </motion.li>
-  ),
-);
-
-MovieItem.displayName = 'MovieItem';
 
 const MovieSearch: React.FC = () => {
   const [results, setResults] = useState<Movie[]>([]);
@@ -149,18 +108,11 @@ const MovieSearch: React.FC = () => {
   return (
     <div className="w-full max-w-2xl mx-auto mt-8">
       <div className="relative search-container">
-        <div className="relative">
-          <input
-            data-testid="search-input"
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => query && setShowDropdown(true)}
-            placeholder="Search movies..."
-            className="w-full px-4 py-2 pl-10 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          />
-          <Search data-testid="search-icon" className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-        </div>
+        <SearchInput 
+          query={query} 
+          setQuery={setQuery} 
+          onFocus={() => query && setShowDropdown(true)} 
+        />
 
         <AnimatePresence>
           {showDropdown && (
