@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
-import { motion, AnimatePresence, animate } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Movie, movieList } from '../data/movieList';
 import MovieItem from './MovieItem';
@@ -108,11 +108,7 @@ const MovieSearch: React.FC = () => {
   return (
     <div className="w-full max-w-2xl mx-auto mt-8">
       <div className="relative search-container">
-        <SearchInput 
-          query={query} 
-          setQuery={setQuery} 
-          onFocus={() => query && setShowDropdown(true)} 
-        />
+        <SearchInput query={query} setQuery={setQuery} onFocus={() => query && setShowDropdown(true)} />
 
         <AnimatePresence>
           {showDropdown && (
