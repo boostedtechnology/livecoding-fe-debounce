@@ -35,7 +35,7 @@ The site shows an input field with a list of movies to search from. The movie se
 ### Task 1
 - Implement the debounce search in a custom hook
 ### Task 2
-- Implement Error Boundary for the movie list
+- Implement Error Boundary for MovieGrid component
 ### Task 3
 - Implement pagination for the movie list and search results
 ### Task 4
